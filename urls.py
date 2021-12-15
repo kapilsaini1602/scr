@@ -1,9 +1,13 @@
+from django.conf.urls import url, include
 from django.contrib import admin
-from django.urls import path, include
-from .views import *
+from . import views
 
 urlpatterns = [
-    path('', process_payment_paypal, name='process_payment_paypal'),
-    path('payment-done-paypal/', payment_done_paypal, name='payment_done_paypal'),
-    path('payment-cancelled-paypal/', payment_cancelled_paypal, name='payment_cancelled_paypal'),
+    url('login', views.homep, name="home"),
+    url('logout', views.logout, name="logout"),
+    url('welcome', views.homepwel, name="homewel"),
+    url('reigster', views.regist, name="register"),
+    url('forgot', views.forgot, name="forgot"),
+    url('change_pass/<token>/', views.change_pass, name="change_pass"),
+
 ]

@@ -1,62 +1,88 @@
-from django.shortcuts import render
-from paypal.standard.forms import PayPalPaymentsForm
-from django.views.decorators.csrf import csrf_exempt
-from paypal.standard.forms import PayPalPaymentsForm
-from django.views.decorators.csrf import csrf_exempt
-from django.conf import settings
-from decimal import Decimal
-from .models import *
-from django.shortcuts import render, HttpResponse, redirect, \
-    get_object_or_404, reverse
-from paytm_integ.models import OrderDetails
-from . import Checksm
+# # -*- coding: utf-8 -*-
+# from __future__ import unicode_literals
+
+from django.shortcuts import render,HttpResponse,redirect
+from .models import Logs
+from .helpers import send_forget_pass
+from django.contrib.auth.models import User
 
 
-# Create your views here.
-def process_payment_paypal(request):
+# Create your views here.'
+# from homep.forms import Loginform
+
+def homep(request):
     if request.method == "POST":
-        host = request.get_host()
-        username = request.POST.get('email')
+        name = request.POST.get('name')
         password = request.POST.get('password')
-        ammount = request.POST.get('ammount')
-        obj = OrderDetails.objects.create(username=username, password=password, ammount=ammount)
+        obj = Logs.objects.filter(username=name, password=password)
+        if obj:
+            request.session['name'] = name
+            return redirect('../welcome')
+        else:
+            print("NOPE")
+            return render(request, 'homep/homep.html', {'error': "**User do not Exist"})
+    elif request.session.has_key('name'):
+        return redirect('../welcome')
+
+    return render(request, 'homep/homep.html')
+
+def regist(request):
+    if request.method == "POST":
+        name = request.POST.get('name')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        obj = Logs.objects.create(name=name,username=email,password=password)
         obj.save()
-        # order = get_object_or_404(OrderDetails, id=obj.id)
-        paypal_dict = {
-            'business': settings.PAYPAL_RECEIVER_EMAIL,
-            'amount': ammount,
-            'item_name': 'Order {}'.format(obj.id),
-            'invoice': str(obj.id),
-            'currency_code': 'USD',
-            'notify_url': 'http://{}{}'.format(host,
-                                               reverse('paypal-ipn')),
-            'return_url': 'http://{}{}'.format(host,
-                                               reverse('payment_done_paypal')),
-            'cancel_return': 'http://{}{}'.format(host,
-                                                  reverse('payment_cancelled_paypal')),
-        }
-        paytm_dict = {
-            'MID': 'yRKdgL21634551259403',
-            'ORDER_ID': str(obj.id),
-            'INDUSTRY_TYPE_ID': 'Retail',
-            'WEBSITE': 'WEBSTAGING',
-            'CHANNEL_ID': 'WEB',
-            'CALLBACK_URL': 'http://127.0.0.1:8000/paytm_integ/handlepayment/',
-            'CUST_ID': username,
-            'TXN_AMOUNT': str(ammount),
-        }
-        paytm_dict['CHECKSUMHASH'] = Checksm.generate_checksum(paytm_dict, 'JU78@Z_IBrWJcA30')
+        return render(request,'homep/regist.html',{'message':"Signup Successfully!!"})
+    return render(request,'homep/regist.html')
 
-        form = PayPalPaymentsForm(initial=paypal_dict)
-        return render(request, 'paypal_payment.html', {'fm_paypal': form, 'fm_paytm': paytm_dict})
+def homepwel(request):
+    if request.session.has_key('name'):
+        name = request.session['name']
+        obj = Logs.objects.filter(username=name)
+        for k in obj:
+            return render(request,'homep/welocme.html',{'name':k.name})
+    return HttpResponse("You need to Login first")
 
-    return render(request, 'paypal_index.html')
+def logout(request):
+    if request.session.has_key('name'):
+        try:
+            del request.session['name']
+            return redirect('home')
+        except:
+            return redirect('home')
+import uuid
+def forgot(request):
+    if request.method == "POST":
+        email = request.POST.get("name")
+        if Logs.objects.filter(username=email).exists():
+            # obj = Logs.objects.get(username=name)
+            # print("check",obj)
+            token = str(uuid.uuid4())
+            print(token)
+            send_forget_pass(email,token)
+        else:
+            return render(request, 'forgotpass.html',{"error":"User not Exist"})
 
-
-def payment_done_paypal(request):
-    print(request.session.keys())
-    return render(request, 'payment_done_paypal.html')
+    return render(request,'forgotpass.html')
 
 
-def payment_cancelled_paypal(request):
-    return render(request, 'payment_cancelled_paypal.html')
+def change_pass(request,token):
+    if request.method == "POST":
+        username = request.POST.get("email")
+        print(username)
+        pass1 = request.POST.get("pass1")
+        obj = Logs.objects.filter(username = username)
+        print(obj)
+    return render(request,'changepass.html')
+
+
+
+
+
+
+
+
+
+
+
